@@ -2,7 +2,7 @@
 
 A container-native MCP (Model Context Protocol) server that provides tools to query the [Red Hat Security Data API](https://access.redhat.com/documentation/en-us/red_hat_security_data_api/) for CVE (Common Vulnerabilities and Exposures) and RHSA (Red Hat Security Advisory) information.
 
-**👤 Author:** [toughIQ](https://github.com/toughIQ)  
+**👤 Author:** [toughIQ](https://github.com/toughIQ) · *With support from [Claude Code](https://claude.ai/code)*  
 **📜 License:** MIT  
 **🔗 Repository:** [https://github.com/toughIQ/rhsda-mcp](https://github.com/toughIQ/rhsda-mcp)
 
