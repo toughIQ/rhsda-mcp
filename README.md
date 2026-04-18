@@ -515,6 +515,8 @@ To contribute:
 - 🐙 GitHub: [@toughIQ](https://github.com/toughIQ)
 - 📧 Email: toughiq@gmail.com
 
+*Created with assistance from [Claude Code](https://claude.ai/code).*
+
 ## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

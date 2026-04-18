@@ -1,5 +1,7 @@
 # Testing Guide for Red Hat Security Data MCP Server
 
+*Documentation created with assistance from [Claude Code](https://claude.ai/code).*
+
 ## Quick Verification
 
 ### 1. Container-Based Testing (Official Method)
