@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  rhsda-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rhsda-mcp-server
+    ports:
+      - "6060:8000"  # Map external port 6060 to internal port 8000
+    environment:
+      - FASTMCP_TRANSPORT=sse
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6060/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

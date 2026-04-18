@@ -1,0 +1,38 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Documentation (not needed in image)
+README.md
+TESTING.md
+.claude/
+
+# Config files (not needed in image)
+mcp-config-*.json
+uv.lock
+
+# Container files themselves
+Dockerfile
+Containerfile
+compose.yml
+docker-compose.yml
+.dockerignore
+.containerignore

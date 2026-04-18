@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "rhsda": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/path/to/rhsda-mcp",
+        "run",
+        "mcp-server-rhsda.py"
+      ]
+    }
+  }
+}

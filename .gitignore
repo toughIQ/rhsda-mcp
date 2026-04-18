@@ -1,0 +1,18 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Package manager lock files (project uses pip in containers)
+uv.lock
+
+# Debug/log files
+CONTAINER_ERRORS.md
+*.log
+DEBUG*.md

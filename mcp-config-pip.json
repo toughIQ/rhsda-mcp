@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "rhsda": {
+      "command": "/path/to/rhsda-mcp/.venv/bin/python",
+      "args": [
+        "mcp-server-rhsda.py"
+      ],
+      "cwd": "/path/to/rhsda-mcp"
+    }
+  }
+}
