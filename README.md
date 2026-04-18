@@ -1,35 +1,35 @@
-# Red Hat Security Data API MCP Server
+# 🔐 Red Hat Security Data API MCP Server
 
-A container-native MCP (Model Context Protocol) server that provides tools to query Red Hat's Security Data API for CVE (Common Vulnerabilities and Exposures) and RHSA (Red Hat Security Advisory) information.
+A container-native MCP (Model Context Protocol) server that provides tools to query the [Red Hat Security Data API](https://access.redhat.com/documentation/en-us/red_hat_security_data_api/) for CVE (Common Vulnerabilities and Exposures) and RHSA (Red Hat Security Advisory) information.
 
-**Author:** [toughIQ](https://github.com/toughIQ)  
-**License:** MIT  
-**Repository:** [https://github.com/toughIQ/rhsda-mcp](https://github.com/toughIQ/rhsda-mcp)
+**👤 Author:** [toughIQ](https://github.com/toughIQ)  
+**📜 License:** MIT  
+**🔗 Repository:** [https://github.com/toughIQ/rhsda-mcp](https://github.com/toughIQ/rhsda-mcp)
 
-> **Community Project Disclaimer**
+> **⚠️ Community Project Disclaimer**
 >
-> This is an independent community tool for querying Red Hat's official Security Data API. This tool uses Red Hat's official API and documentation but is **NOT affiliated with, endorsed by, or supported by Red Hat, Inc.** Use at your own risk.
+> This is an independent community tool for querying Red Hat's official [Security Data API](https://access.redhat.com/hydra/rest/securitydata). This tool uses Red Hat's official API and [documentation](https://access.redhat.com/documentation/en-us/red_hat_security_data_api/) but is **NOT affiliated with, endorsed by, or supported by Red Hat, Inc.** Use at your own risk.
 
-## Features
+## ✨ Features
 
 This server exposes four MCP tools:
 
-1. **search_cves** - Search for CVEs with flexible filtering options
-2. **get_cve_details** - Get comprehensive details for a specific CVE
-3. **search_advisories** - Search Red Hat Security Advisories (RHSA)
-4. **get_advisory_details** - Get full details for a specific advisory
+1. 🔍 **search_cves** - Search for CVEs with flexible filtering options
+2. 📋 **get_cve_details** - Get comprehensive details for a specific CVE
+3. 📰 **search_advisories** - Search Red Hat Security Advisories (RHSA)
+4. 📄 **get_advisory_details** - Get full details for a specific advisory
 
-## Quick Start: Container Deployment
+## 🚀 Quick Start: Container Deployment
 
 **This is a container-native project.** The official and supported deployment method uses Podman (or Docker).
 
-### Prerequisites
+### 📦 Prerequisites
 
 **Recommended:**
-- **Podman** - Red Hat ecosystem standard ([install guide](https://podman.io/getting-started/installation))
+- 🐳 **Podman** - Red Hat ecosystem standard ([install guide](https://podman.io/getting-started/installation))
 
 **Alternative:**
-- **Docker Desktop** ([download](https://www.docker.com/products/docker-desktop/))
+- 🐋 **Docker Desktop** ([download](https://www.docker.com/products/docker-desktop/))
 
 ### Deploy with Podman Compose
 
@@ -79,11 +79,11 @@ docker build -t rhsda-mcp:latest .
 docker run -d --name rhsda-mcp-server -p 6060:6060 rhsda-mcp:latest
 ```
 
-> **Note**: This project runs on port **6060** by default to avoid conflicts with other development tools (many use 8000/8080).
+> 💡 **Note**: This project runs on port **6060** by default to avoid conflicts with other development tools (many use 8000/8080).
 
-## Configuration
+## ⚙️ Configuration
 
-### Claude Desktop
+### 🖥️ Claude Desktop
 
 Add to your Claude Desktop configuration file:
 
@@ -101,7 +101,7 @@ Add to your Claude Desktop configuration file:
 }
 ```
 
-### Claude Code CLI
+### 💻 Claude Code CLI
 
 Add to `~/.claude/mcp.json`:
 
@@ -118,11 +118,11 @@ Add to `~/.claude/mcp.json`:
 
 **After adding the configuration**, restart Claude Desktop or Claude Code for the changes to take effect.
 
-## Usage Examples
+## 💡 Usage Examples
 
 Once configured in Claude Code or Claude Desktop, you can use natural language queries:
 
-### Example 1: Search for recent critical CVEs
+### 🎯 Example 1: Search for recent critical CVEs
 
 ```
 Search for critical CVEs in RHEL 9 from the past 30 days
@@ -133,7 +133,7 @@ This will use the `search_cves` tool with:
 - `product="rhel 9"`
 - `after="2026-03-19"` (30 days before today)
 
-### Example 2: Get specific CVE details
+### 🎯 Example 2: Get specific CVE details
 
 ```
 Show me detailed information about CVE-2024-1086
@@ -142,7 +142,7 @@ Show me detailed information about CVE-2024-1086
 This will use the `get_cve_details` tool with:
 - `cve_id="CVE-2024-1086"`
 
-### Example 3: Search advisories by package
+### 🎯 Example 3: Search advisories by package
 
 ```
 Find all security advisories for the kernel package in 2024
@@ -152,7 +152,7 @@ This will use the `search_advisories` tool with:
 - `package="kernel"`
 - `after="2024-01-01"`
 
-### Example 4: Get advisory details
+### 🎯 Example 4: Get advisory details
 
 ```
 Get the full details of RHSA-2024:0500
@@ -161,7 +161,7 @@ Get the full details of RHSA-2024:0500
 This will use the `get_advisory_details` tool with:
 - `rhsa_id="RHSA-2024:0500"`
 
-### Example 5: Complex search with multiple filters
+### 🎯 Example 5: Complex search with multiple filters
 
 ```
 Show me important or critical CVEs with CVSS score above 8.0 affecting OpenShift
@@ -172,7 +172,7 @@ This will use the `search_cves` tool with:
 - `cvss3_score=8.0`
 - `product="openshift"`
 
-## Tool Reference
+## 🛠️ Tool Reference
 
 ### search_cves
 
@@ -224,7 +224,7 @@ Get detailed information about a specific Red Hat Security Advisory.
 
 **Returns:** Detailed markdown with advisory title, severity, release dates, description, CVEs addressed, affected products, and references.
 
-## Container Operations
+## 🐳 Container Operations
 
 ### Building the Image
 
@@ -328,7 +328,7 @@ podman-compose build
 podman-compose up -d
 ```
 
-## Troubleshooting
+## 🔧 Troubleshooting
 
 ### Container Issues
 
@@ -418,16 +418,18 @@ sudo setenforce 0
 2. Verify the Red Hat Security Data API is accessible: visit https://access.redhat.com/hydra/rest/securitydata/cve.json in a browser
 3. Check container logs for specific error messages: `podman logs rhsda-mcp-server`
 
-## API Information
+## 🌐 API Information
 
-This server queries the Red Hat Security Data API:
+This server queries the **[Red Hat Security Data API](https://access.redhat.com/hydra/rest/securitydata)**:
 
-- **Base URL:** `https://access.redhat.com/hydra/rest/securitydata`
-- **Documentation:** [Red Hat Security Data API](https://access.redhat.com/documentation/en-us/red_hat_security_data_api/)
-- **Format:** JSON responses
-- **Authentication:** None required (public API)
+- **🔗 Base URL:** [`https://access.redhat.com/hydra/rest/securitydata`](https://access.redhat.com/hydra/rest/securitydata)
+- **📚 Documentation:** [Red Hat Security Data API Docs](https://access.redhat.com/documentation/en-us/red_hat_security_data_api/)
+- **📊 CVE Endpoint:** [`/cve.json`](https://access.redhat.com/hydra/rest/securitydata/cve.json)
+- **📋 RHSA Endpoint:** [`/rhsa.json`](https://access.redhat.com/hydra/rest/securitydata/rhsa.json)
+- **💾 Format:** JSON responses
+- **🔓 Authentication:** None required (public API)
 
-## Error Handling
+## 🛡️ Error Handling
 
 The server includes comprehensive error handling:
 
@@ -436,7 +438,7 @@ The server includes comprehensive error handling:
 - **Network issues:** Timeout handling with 30-second limit
 - **Missing data:** Handles incomplete API responses gracefully
 
-## Development
+## 👨‍💻 Development
 
 ### Project Structure
 
@@ -489,7 +491,7 @@ View logs:
 podman logs -f rhsda-mcp-server
 ```
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please ensure:
 
@@ -507,19 +509,19 @@ To contribute:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## Author & Maintainer
+## 👤 Author & Maintainer
 
 **toughIQ**
-- GitHub: [@toughIQ](https://github.com/toughIQ)
-- Email: toughiq@gmail.com
+- 🐙 GitHub: [@toughIQ](https://github.com/toughIQ)
+- 📧 Email: toughiq@gmail.com
 
-## License
+## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 This is an independent community project not affiliated with, endorsed by, or supported by Red Hat, Inc. The Red Hat Security Data API is provided by Red Hat under their own terms of service.
 
-## Resources
+## 📚 Resources
 
 - [Model Context Protocol Documentation](https://modelcontextprotocol.io/)
 - [Red Hat Security Data API Documentation](https://access.redhat.com/documentation/en-us/red_hat_security_data_api/)
@@ -530,7 +532,7 @@ This is an independent community project not affiliated with, endorsed by, or su
 
 ---
 
-## Appendix: Local Installation (Unsupported)
+## 📎 Appendix: Local Installation (Unsupported)
 
 > ⚠️ **WARNING: This installation method is unsupported.**
 >
