@@ -23,7 +23,8 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 # Initialize FastMCP server
-mcp = FastMCP("rhsda")
+# Use 0.0.0.0 for container deployment to accept external connections
+mcp = FastMCP("rhsda", host="0.0.0.0", port=8000)
 
 # API Configuration
 API_BASE_URL = "https://access.redhat.com/hydra/rest/securitydata"
@@ -626,22 +627,11 @@ def main():
     Transport is selected via FASTMCP_TRANSPORT environment variable:
     - "sse" (default): Server-Sent Events over HTTP for containerized deployment
     - "stdio": Standard input/output for local MCP clients (unsupported)
-
-    Environment variables for HTTP/SSE mode:
-    - FASTMCP_HOST: Listen address (default: 0.0.0.0 for containers)
-    - FASTMCP_PORT: Listen port (default: 6060)
     """
     transport = os.getenv("FASTMCP_TRANSPORT", "sse")
 
     if transport == "sse":
-        # Set uvicorn to listen on all interfaces for container deployment
-        os.environ.setdefault("UVICORN_HOST", "0.0.0.0")
-        os.environ.setdefault("UVICORN_PORT", "8000")
-
-        logger.info(
-            f"Starting Red Hat Security Data MCP Server (SSE transport) "
-            f"on {os.environ.get('UVICORN_HOST', '0.0.0.0')}:{os.environ.get('UVICORN_PORT', '8000')}"
-        )
+        logger.info("Starting Red Hat Security Data MCP Server (SSE transport)")
         mcp.run(transport="sse")
     elif transport == "stdio":
         logger.info("Starting Red Hat Security Data MCP Server (stdio transport)")

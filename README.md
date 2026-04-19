@@ -65,21 +65,21 @@ podman build -t rhsda-mcp:latest .
 # Run the container
 podman run -d \
   --name rhsda-mcp-server \
-  -p 6060:6060 \
+  -p 6060:8000 \
   --restart unless-stopped \
   rhsda-mcp:latest
 
-# Check health
-curl http://localhost:6060/
+# Verify it's running
+curl http://localhost:6060/sse
 ```
 
 **Using Docker CLI instead:**
 ```bash
 docker build -t rhsda-mcp:latest .
-docker run -d --name rhsda-mcp-server -p 6060:6060 rhsda-mcp:latest
+docker run -d --name rhsda-mcp-server -p 6060:8000 rhsda-mcp:latest
 ```
 
-> 💡 **Note**: This project runs on port **6060** by default to avoid conflicts with other development tools (many use 8000/8080).
+> 💡 **Note**: The server listens on port **8000** internally and is exposed on **6060** externally to avoid conflicts with other development tools.
 
 ## ⚙️ Configuration
 
@@ -240,10 +240,10 @@ docker build -t rhsda-mcp:latest .
 
 ```bash
 # Podman
-podman run -d -p 6060:6060 --name rhsda-mcp-server rhsda-mcp:latest
+podman run -d -p 6060:8000 --name rhsda-mcp-server rhsda-mcp:latest
 
 # Docker alternative
-docker run -d -p 6060:6060 --name rhsda-mcp-server rhsda-mcp:latest
+docker run -d -p 6060:8000 --name rhsda-mcp-server rhsda-mcp:latest
 ```
 
 ### Viewing Logs
@@ -258,44 +258,23 @@ docker logs rhsda-mcp-server
 docker logs -f rhsda-mcp-server
 ```
 
-### Health Checks
+### Verifying the Server
 
-The container includes automatic health checks. You can verify the server is responding:
+You can verify the server is responding:
 
 ```bash
-curl http://localhost:6060/
-# Should return HTTP 200 or 404 (root path may not be defined, which is OK)
+curl http://localhost:6060/sse
+# Should start returning SSE events (streaming response)
 ```
-
-The health check uses the same endpoint and runs every 30 seconds.
 
 ### Environment Variables
 
-You can customize the server behavior using environment variables:
+The server uses the following environment variables:
 
-- `FASTMCP_TRANSPORT` - Transport mode: `sse` (default) or `stdio`
-- `FASTMCP_HOST` - Listen address: `0.0.0.0` (default for containers)
-- `FASTMCP_PORT` - Listen port: `6060` (default)
+- `FASTMCP_TRANSPORT` - Transport mode: `sse` (default, for HTTP/container deployment) or `stdio` (for local MCP clients)
 - `PYTHONUNBUFFERED` - Python buffering: `1` (default, ensures logs appear immediately)
 
-Example with custom port:
-
-```bash
-podman run -d \
-  -p 7070:7070 \
-  -e FASTMCP_PORT=7070 \
-  --name rhsda-mcp-server \
-  rhsda-mcp:latest
-```
-
-Or modify `compose.yml`:
-
-```yaml
-environment:
-  - FASTMCP_PORT=7070
-ports:
-  - "7070:7070"
-```
+> **Note:** The server listens on `0.0.0.0:8000` internally. Port configuration is managed via the port mapping (`-p` flag or `ports:` in compose.yml), not environment variables.
 
 ### Stopping and Removing
 
@@ -342,14 +321,14 @@ podman logs rhsda-mcp-server
 podman ps -a | grep rhsda
 ```
 
-**Health check failing:**
+**Server not responding:**
 
 ```bash
-# Test the endpoint directly
-curl -v http://localhost:6060/
+# Test the SSE endpoint directly
+curl -v http://localhost:6060/sse
 
-# Check if the server is listening
-podman exec rhsda-mcp-server curl -f http://localhost:6060/
+# Check if the server is listening inside the container
+podman exec rhsda-mcp-server curl -f http://localhost:8000/sse
 ```
 
 **Port already in use:**
@@ -360,8 +339,8 @@ lsof -i :6060
 # or
 ss -tulpn | grep 6060
 
-# Use a different port mapping
-podman run -d -p 7070:6060 --name rhsda-mcp-server rhsda-mcp:latest
+# Use a different external port (keep internal as 8000)
+podman run -d -p 7070:8000 --name rhsda-mcp-server rhsda-mcp:latest
 # Then update your Claude config URL to http://localhost:7070/sse
 ```
 
@@ -400,7 +379,7 @@ sudo setenforce 0
 **Tools not appearing in Claude:**
 
 1. Verify the container is running: `podman ps | grep rhsda`
-2. Check health: `curl http://localhost:6060/`
+2. Check endpoint responds: `curl http://localhost:6060/sse`
 3. Verify URL in config matches: `http://localhost:6060/sse`
 4. Restart Claude Desktop/Code after config changes
 5. Check Claude logs for MCP server errors
@@ -460,7 +439,7 @@ For active development with live code changes:
 ```bash
 # Run with volume mount for live code updates
 podman run -d \
-  -p 6060:6060 \
+  -p 6060:8000 \
   -v $(pwd)/mcp-server-rhsda.py:/app/mcp-server-rhsda.py:ro \
   --name rhsda-mcp-dev \
   rhsda-mcp:latest
