@@ -168,7 +168,18 @@ Get the full details of RHSA-2024:0500
 This will use the `get_advisory_details` tool with:
 - `rhsa_id="RHSA-2024:0500"`
 
-### 🎯 Example 5: Complex search with multiple filters
+### 🎯 Example 5: Search advisories by product
+
+```
+Are there any new RHSAs for Red Hat AMQ Streams?
+```
+
+This will use the `search_advisories` tool with:
+- `product="Red Hat AMQ Streams"`
+
+> **Note:** The `product` parameter requires the official Red Hat product name (see [Known Limitations](#known-limitations--product-based-advisory-search) below).
+
+### 🎯 Example 6: Complex search with multiple filters
 
 ```
 Show me important or critical CVEs with CVSS score above 8.0 affecting OpenShift
@@ -214,11 +225,14 @@ Search Red Hat Security Advisories (RHSA).
 **Parameters:**
 - `rhsa_ids` (optional): Comma-separated RHSA IDs (e.g., "RHSA-2024:1234,RHSA-2024:5678")
 - `severity` (optional): Filter by severity - "low", "moderate", "important", "critical"
+- `product` (optional): Filter by Red Hat product (e.g., "Red Hat AMQ Streams", "Red Hat OpenShift Container Platform 4")
 - `package` (optional): Filter by affected package name
 - `cve` (optional): Filter by CVE identifier(s) - comma-separated
 - `after` (optional): Advisories published after date (YYYY-MM-DD format)
 - `before` (optional): Advisories published before date (YYYY-MM-DD format)
 - `per_page` (optional): Results per page (default: 20, max: 100)
+
+> **How product filtering works:** The underlying CSAF advisory API (`/csaf.json`) does not support a `product` parameter. When `product` is specified, the server performs a two-step lookup: first querying the CVE API (`/cve.json`) for CVEs affecting that product, then finding advisories that address those CVEs. See [Known Limitations](#known-limitations--product-based-advisory-search) for important caveats.
 
 **Returns:** Markdown table with RHSA ID, severity, release date, synopsis, and related CVEs.
 
@@ -413,6 +427,49 @@ sudo setenforce 0
 1. Check your internet connection (from inside the container)
 2. Verify the Red Hat Security Data API is accessible: visit https://access.redhat.com/hydra/rest/securitydata/cve.json in a browser
 3. Check container logs for specific error messages: `podman logs rhsda-mcp-server`
+
+## Known Limitations — Product-Based Advisory Search
+
+The `product` parameter on `search_advisories` is a **workaround for an API limitation**, not a native feature. The Red Hat CSAF advisory endpoint (`/csaf.json`) does not support product filtering — it explicitly rejects the parameter. To work around this, the server uses a two-step approach:
+
+1. Query the CVE endpoint (`/cve.json`) for CVEs tagged with the given product
+2. Use those CVE IDs to find matching advisories via the CSAF endpoint
+
+This produces useful results but is **not equivalent** to the product filtering available on the [Red Hat Errata portal](https://access.redhat.com/errata-search/). The following limitations apply:
+
+### False Negatives — Missing Advisories
+
+Some advisories will not appear in results even though they target the requested product. This happens when the CVEs addressed by an advisory are not tagged with the product name in the CVE data. For example, RHSA-2025:2416 (Streams for Apache Kafka 2.9.0) does not appear when searching for "Red Hat AMQ Streams" because its CVEs (CVE-2023-52428, CVE-2024-8184, etc.) are not tagged with that product in the CVE API.
+
+### False Positives — Advisories for Other Products
+
+When multiple products share the same CVEs (common with Go, Java, and Python ecosystem vulnerabilities), the results may include advisories that fix those CVEs in *other* products. For example, searching for "Red Hat Advanced Cluster Management" may return Service Mesh advisories because both products are affected by the same Go library CVEs. The errata portal filters by which product an advisory was *released for*; our workaround filters by which products *share the same CVEs*.
+
+### Product Name Sensitivity
+
+The CVE API requires specific product name strings. Short names like `"openshift 4"` or `"amq streams"` may return no results, while the official names like `"Red Hat OpenShift Container Platform 4"` or `"Red Hat AMQ Streams"` work correctly. There is no fuzzy matching, autocomplete, or validation. If you get zero results, try the full official product name as it appears on the [Red Hat Customer Portal](https://access.redhat.com/products/).
+
+Some known working product names:
+- `"Red Hat AMQ Streams"`
+- `"Red Hat OpenShift Container Platform 4"`
+- `"Red Hat OpenShift Service Mesh"`
+- `"Red Hat Advanced Cluster Management for Kubernetes 2"`
+- `"Red Hat Advanced Cluster Security 4"`
+- `"Red Hat Enterprise Linux 9"` / `"rhel 9"`
+
+### CVE Cap
+
+The CVE lookup is capped at 100 results. For very broad products (e.g., RHEL 9), this means advisories linked to CVEs outside the most recent 100 will be missed. Use `severity`, `after`, or `before` filters to narrow the scope.
+
+### Missing Advisory Metadata
+
+The CSAF list endpoint does not return synopsis or release date in its summary response. These fields may show as "N/A" in search results. Use `get_advisory_details` with a specific RHSA ID to get full metadata.
+
+### Why Not Use the Errata Portal API?
+
+The [Red Hat Errata Search](https://access.redhat.com/errata-search/) portal supports proper product filtering and returns complete advisory metadata. However, it is a JavaScript-rendered frontend application, not a documented REST API. It does not expose a stable, publicly documented JSON endpoint suitable for programmatic access. If Red Hat adds product filtering to the CSAF API or publishes a stable errata search API in the future, this workaround should be replaced.
+
+---
 
 ## 🌐 API Information
 
