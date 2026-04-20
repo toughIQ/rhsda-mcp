@@ -436,12 +436,16 @@ The server includes comprehensive error handling:
 
 ## 👨‍💻 Development
 
+### Container Image
+
+The container is built on `quay.io/fedora/fedora-minimal` — a lightweight Fedora base image (~136 MB) — with only Python 3.12 and curl installed on top. This produces a final image of ~293 MB, compared to ~1.2 GB with the full `quay.io/fedora/python-312` image.
+
 ### Project Structure
 
 ```
 rhsda-mcp/
 ├── mcp-server-rhsda.py      # Main server implementation
-├── Dockerfile                # Container image definition
+├── Dockerfile                # Container image definition (fedora-minimal based)
 ├── compose.yml               # Podman Compose configuration
 ├── .mcp.json                 # Claude Code MCP server config (auto-detected)
 ├── .containerignore          # Build context optimization

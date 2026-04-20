@@ -1,19 +1,16 @@
-# Use Fedora-based Python image (Red Hat ecosystem alignment)
-FROM quay.io/fedora/python-312:latest
-
-# Switch to root to install system packages
-USER 0
+# Use Fedora minimal image for smaller footprint (~136 MB base vs ~1.08 GB)
+FROM quay.io/fedora/fedora-minimal:latest
 
 WORKDIR /app
 
-# Install curl for health checks
-RUN dnf install -y curl && \
-    dnf clean all
+# Install Python 3.12 and curl (for health checks)
+RUN microdnf install -y python3.12 curl && \
+    microdnf clean all
 
-# Copy and install dependencies
+# Bootstrap pip for python3.12 and install dependencies
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir httpx>=0.28.1 'fastmcp>=0.3.0'
+RUN python3.12 -m ensurepip --upgrade && \
+    python3.12 -m pip install --no-cache-dir httpx>=0.28.1 'fastmcp>=0.3.0'
 
 # Copy server code
 COPY mcp-server-rhsda.py ./
@@ -33,4 +30,4 @@ ENV FASTMCP_HOST=0.0.0.0 \
     PYTHONUNBUFFERED=1
 
 # Run server
-CMD ["python", "mcp-server-rhsda.py"]
+CMD ["python3.12", "mcp-server-rhsda.py"]
