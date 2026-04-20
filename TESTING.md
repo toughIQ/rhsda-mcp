@@ -13,8 +13,10 @@
 podman-compose up -d
 
 # Verify it's running
-curl http://localhost:6060/
-# Should return HTTP connection (200 or 404 is OK for root path)
+curl -X POST http://localhost:6060/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
+# Should return a JSON-RPC response with server info
 
 # Check health status
 podman ps | grep rhsda
@@ -26,20 +28,26 @@ podman-compose logs
 **Using Docker instead:**
 ```bash
 docker compose up -d
-curl http://localhost:6060/
+curl -X POST http://localhost:6060/mcp -H "Content-Type: application/json" -d '{}'
 docker compose logs
 ```
 
 ### 2. Configure Claude
 
-Add to your Claude Code config (`~/.claude/mcp.json`):
+Register the server with Claude Code:
+
+```bash
+claude mcp add --transport http -s project rhsda http://localhost:6060/mcp
+```
+
+Or add to your project's `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "rhsda": {
-      "url": "http://localhost:6060/sse",
-      "transport": "sse"
+      "type": "http",
+      "url": "http://localhost:6060/mcp"
     }
   }
 }
@@ -231,7 +239,7 @@ Ask Claude to perform multiple queries in succession without waiting for each to
 podman ps
 
 # Health check endpoint should respond
-curl http://localhost:6060/
+curl -X POST http://localhost:6060/mcp -H "Content-Type: application/json" -d '{}'
 ```
 
 ### Log Inspection
@@ -240,8 +248,8 @@ curl http://localhost:6060/
 # Check for startup message
 podman logs rhsda-mcp-server | grep "Starting Red Hat Security Data MCP Server"
 
-# Check for SSE transport
-podman logs rhsda-mcp-server | grep "SSE transport"
+# Check for dual transport startup
+podman logs rhsda-mcp-server | grep "dual SSE + HTTP transport"
 
 # Should see log messages for API requests
 podman logs rhsda-mcp-server | grep "Making API request"
@@ -266,7 +274,7 @@ podman restart rhsda-mcp-server
 sleep 5
 
 # Verify still working
-curl http://localhost:6060/
+curl -X POST http://localhost:6060/mcp -H "Content-Type: application/json" -d '{}'
 
 # Test a query in Claude
 ```
@@ -278,14 +286,16 @@ curl http://localhost:6060/
 For active development only:
 
 ```bash
-# Test SSE mode locally
-FASTMCP_TRANSPORT=sse FASTMCP_PORT=6060 python mcp-server-rhsda.py &
+# Test HTTP mode locally (starts dual SSE + HTTP transport)
+FASTMCP_HOST=127.0.0.1 FASTMCP_PORT=6060 python mcp-server-rhsda.py &
 
 # Wait for startup
 sleep 2
 
 # Test endpoint
-curl http://localhost:6060/sse
+curl -X POST http://localhost:6060/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
 
 # Kill when done
 pkill -f mcp-server-rhsda.py
@@ -304,8 +314,9 @@ FASTMCP_TRANSPORT=stdio python mcp-server-rhsda.py
 
 1. Check container is running: `podman ps | grep rhsda`
 2. Check logs for errors: `podman logs rhsda-mcp-server`
-3. Verify config URL: `http://localhost:6060/sse`
+3. Verify config URL: `http://localhost:6060/mcp`
 4. Restart Claude after config changes
+5. For Claude Code: check server status with `/mcp` command or `claude mcp list`
 
 ### API Calls Failing
 

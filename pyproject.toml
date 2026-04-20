@@ -3,7 +3,7 @@ name = "rhsda-mcp"
 version = "0.1.0"
 description = "MCP server for Red Hat Security Data API - query CVEs and security advisories"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [
     { name = "toughIQ", email = "toughiq@gmail.com" }
@@ -25,7 +25,7 @@ classifiers = [
 
 dependencies = [
     "httpx>=0.28.1",
-    "mcp>=1.2.0",
+    "fastmcp>=0.3.0",
 ]
 
 [project.urls]

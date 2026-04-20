@@ -5,7 +5,10 @@
       "args": [
         "mcp-server-rhsda.py"
       ],
-      "cwd": "/path/to/rhsda-mcp"
+      "cwd": "/path/to/rhsda-mcp",
+      "env": {
+        "FASTMCP_TRANSPORT": "stdio"
+      }
     }
   }
 }
