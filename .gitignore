@@ -16,3 +16,6 @@ uv.lock
 CONTAINER_ERRORS.md
 *.log
 DEBUG*.md
+
+# Claude Code project files
+.claude/
