@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "rhsda": {
+      "url": "http://localhost:6060/mcp",
+      "transport": "http"
+    }
+  }
+}

@@ -13,7 +13,7 @@ RUN dnf install -y curl && \
 # Copy and install dependencies
 COPY pyproject.toml ./
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir httpx>=0.28.1 mcp>=1.2.0
+    pip install --no-cache-dir httpx>=0.28.1 'fastmcp>=0.3.0'
 
 # Copy server code
 COPY mcp-server-rhsda.py ./
@@ -26,8 +26,11 @@ USER mcpuser
 # Expose port 8000 (FastMCP default)
 EXPOSE 8000
 
-# Environment variables
-ENV FASTMCP_TRANSPORT=sse \
+# Environment variables for FastMCP
+ENV FASTMCP_HOST=0.0.0.0 \
+    FASTMCP_PORT=8000 \
+    FASTMCP_TRANSPORT=http \
+    FASTMCP_LOG_LEVEL=INFO \
     PYTHONUNBUFFERED=1
 
 # Run server

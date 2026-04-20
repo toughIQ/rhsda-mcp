@@ -20,35 +20,28 @@ from typing import Optional, Any
 from datetime import datetime
 
 import httpx
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 # Initialize FastMCP server
-# Use 0.0.0.0 for container deployment to accept external connections
-mcp = FastMCP("rhsda", host="0.0.0.0", port=8000)
+# Host and port configured via FASTMCP_HOST and FASTMCP_PORT environment variables
+mcp = FastMCP("rhsda")
 
 # API Configuration
 API_BASE_URL = "https://access.redhat.com/hydra/rest/securitydata"
 API_TIMEOUT = 30.0
 USER_AGENT = "rhsda-mcp-server/1.0"
 
-# Configure logging based on transport mode
-# sse (default): log to stdout (container-visible)
-# stdio: log to stderr (stdout reserved for protocol)
-TRANSPORT_MODE = os.getenv("FASTMCP_TRANSPORT", "sse")
+# Configure logging
+# For HTTP: log to stdout (container-visible)
+# For stdio: log to stderr (stdout reserved for MCP protocol)
+TRANSPORT_MODE = os.getenv("FASTMCP_TRANSPORT", "http")
+LOG_LEVEL = os.getenv("FASTMCP_LOG_LEVEL", "INFO")
 
-if TRANSPORT_MODE == "stdio":
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        stream=sys.stderr
-    )
-else:
-    # SSE/HTTP mode - log to stdout for container visibility
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        stream=sys.stdout
-    )
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stderr if TRANSPORT_MODE == "stdio" else sys.stdout
+)
 logger = logging.getLogger(__name__)
 
 
@@ -622,23 +615,17 @@ async def get_advisory_details(rhsa_id: str) -> str:
 # === SERVER STARTUP ===
 
 def main():
-    """Run the MCP server with configurable transport.
+    """Run the MCP server.
 
-    Transport is selected via FASTMCP_TRANSPORT environment variable:
-    - "sse" (default): Server-Sent Events over HTTP for containerized deployment
-    - "stdio": Standard input/output for local MCP clients (unsupported)
+    Server configuration via environment variables:
+    - FASTMCP_HOST: Bind address (default: 127.0.0.1, use 0.0.0.0 for containers)
+    - FASTMCP_PORT: Server port (default: 8000)
+    - FASTMCP_TRANSPORT: Transport protocol (default: http, also supports: stdio, sse)
+    - FASTMCP_LOG_LEVEL: Logging level (default: INFO)
     """
-    transport = os.getenv("FASTMCP_TRANSPORT", "sse")
-
-    if transport == "sse":
-        logger.info("Starting Red Hat Security Data MCP Server (SSE transport)")
-        mcp.run(transport="sse")
-    elif transport == "stdio":
-        logger.info("Starting Red Hat Security Data MCP Server (stdio transport)")
-        mcp.run(transport="stdio")
-    else:
-        logger.error(f"Invalid transport mode: {transport}. Use 'sse' or 'stdio'.")
-        sys.exit(1)
+    transport = os.getenv("FASTMCP_TRANSPORT", "http")
+    logger.info(f"Starting Red Hat Security Data MCP Server ({transport} transport)")
+    mcp.run()
 
 
 if __name__ == "__main__":
