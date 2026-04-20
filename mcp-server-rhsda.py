@@ -531,6 +531,7 @@ async def get_cve_details(cve_id: str) -> str:
 async def search_advisories(
     rhsa_ids: Optional[str] = None,
     severity: Optional[str] = None,
+    product: Optional[str] = None,
     package: Optional[str] = None,
     cve: Optional[str] = None,
     after: Optional[str] = None,
@@ -542,6 +543,7 @@ async def search_advisories(
     Args:
         rhsa_ids: Comma-separated RHSA IDs (e.g., "RHSA-2024:1234,RHSA-2024:5678")
         severity: Filter by severity level (low, moderate, important, critical)
+        product: Filter by Red Hat product (e.g., "Red Hat AMQ Streams", "rhel 9", "openshift")
         package: Filter by affected package name
         cve: Filter by CVE identifier(s) - comma-separated
         after: Advisories published after this date (YYYY-MM-DD format)
@@ -555,7 +557,61 @@ async def search_advisories(
     # Limit per_page
     per_page = min(per_page, 100)
 
-    # Build API parameters
+    # When product is specified, use a two-step lookup:
+    # The /csaf.json endpoint does not support product filtering, so we first
+    # find CVEs for the product via /cve.json, then look up their advisories.
+    if product:
+        # Step 1: Find CVEs affecting this product.
+        # Date filters are NOT passed here — CVE publication dates differ from
+        # advisory release dates, so filtering CVEs by date would miss advisories
+        # that bundle older CVEs. Dates are applied to the advisory query instead.
+        cve_params: dict[str, Any] = {
+            'product': product,
+            'per_page': 100,
+        }
+        if severity:
+            cve_params['severity'] = severity.lower()
+
+        cve_data = await make_api_request('/cve.json', cve_params)
+        if cve_data is None:
+            return "❌ Unable to fetch CVE data for product lookup. The Red Hat Security Data API may be temporarily unavailable."
+
+        cve_list = cve_data if isinstance(cve_data, list) else []
+        if not cve_list:
+            return f"No advisories found for product '{product}' with the given filters."
+
+        cve_ids = [c['CVE'] for c in cve_list if 'CVE' in c]
+        if not cve_ids:
+            return f"No advisories found for product '{product}' with the given filters."
+
+        # Step 2: Find advisories addressing those CVEs, with date filters
+        advisory_params: dict[str, Any] = {
+            'cve': ','.join(cve_ids),
+            'per_page': per_page,
+        }
+        if severity:
+            advisory_params['severity'] = severity.lower()
+        if after:
+            advisory_params['after'] = after
+        if before:
+            advisory_params['before'] = before
+
+        data = await make_api_request('/csaf.json', advisory_params)
+        if data is None:
+            return "❌ Unable to fetch advisory data. The Red Hat Security Data API may be temporarily unavailable."
+
+        advisories = data if isinstance(data, list) else []
+        # Deduplicate by RHSA ID
+        seen = set()
+        unique = []
+        for adv in advisories:
+            rhsa = adv.get('RHSA', adv.get('name'))
+            if rhsa and rhsa not in seen:
+                seen.add(rhsa)
+                unique.append(adv)
+        return format_advisory_list(unique)
+
+    # Standard direct query (no product filter)
     params: dict[str, Any] = {
         'per_page': per_page
     }
