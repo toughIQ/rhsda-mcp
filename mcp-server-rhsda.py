@@ -32,9 +32,9 @@ API_TIMEOUT = 30.0
 USER_AGENT = "rhsda-mcp-server/1.0"
 
 # Configure logging
-# For HTTP: log to stdout (container-visible)
+# For container (dual transport): log to stdout (container-visible)
 # For stdio: log to stderr (stdout reserved for MCP protocol)
-TRANSPORT_MODE = os.getenv("FASTMCP_TRANSPORT", "http")
+TRANSPORT_MODE = os.getenv("FASTMCP_TRANSPORT", "")
 LOG_LEVEL = os.getenv("FASTMCP_LOG_LEVEL", "INFO")
 
 logging.basicConfig(
@@ -614,18 +614,87 @@ async def get_advisory_details(rhsa_id: str) -> str:
 
 # === SERVER STARTUP ===
 
+def create_dual_transport_app():
+    """Create a Starlette app serving both SSE and streamable HTTP transports.
+
+    SSE serves: GET /sse + POST /messages/
+    Streamable HTTP serves: POST /mcp
+    Both share the same underlying MCP server and tools.
+    """
+    from contextlib import asynccontextmanager
+
+    from starlette.applications import Starlette
+    from starlette.requests import Request
+    from starlette.responses import Response
+    from starlette.routing import Route, Mount
+
+    from mcp.server.sse import SseServerTransport
+    from fastmcp.server.http import StreamableHTTPSessionManager, StreamableHTTPASGIApp
+
+    sse_transport = SseServerTransport("/messages/")
+    http_asgi = StreamableHTTPASGIApp(None)
+
+    async def handle_sse(request: Request) -> Response:
+        async with sse_transport.connect_sse(
+            request.scope, request.receive, request._send
+        ) as streams:
+            await mcp._mcp_server.run(
+                streams[0],
+                streams[1],
+                mcp._mcp_server.create_initialization_options(),
+            )
+        return Response()
+
+    routes = [
+        Route("/sse", endpoint=handle_sse, methods=["GET"]),
+        Mount("/messages", app=sse_transport.handle_post_message),
+        Route("/mcp", endpoint=http_asgi),
+    ]
+
+    @asynccontextmanager
+    async def lifespan(app):
+        http_asgi.session_manager = StreamableHTTPSessionManager(
+            app=mcp._mcp_server,
+        )
+        async with (
+            mcp._lifespan_manager(),
+            http_asgi.session_manager.run(),
+        ):
+            yield
+
+    return Starlette(routes=routes, lifespan=lifespan)
+
+
 def main():
     """Run the MCP server.
 
     Server configuration via environment variables:
     - FASTMCP_HOST: Bind address (default: 127.0.0.1, use 0.0.0.0 for containers)
     - FASTMCP_PORT: Server port (default: 8000)
-    - FASTMCP_TRANSPORT: Transport protocol (default: http, also supports: stdio, sse)
     - FASTMCP_LOG_LEVEL: Logging level (default: INFO)
+
+    For stdio transport, set FASTMCP_TRANSPORT=stdio.
+    Otherwise, starts a dual-transport server (SSE + streamable HTTP).
     """
-    transport = os.getenv("FASTMCP_TRANSPORT", "http")
-    logger.info(f"Starting Red Hat Security Data MCP Server ({transport} transport)")
-    mcp.run()
+    transport = os.getenv("FASTMCP_TRANSPORT", "sse")
+
+    if transport == "stdio":
+        logger.info("Starting Red Hat Security Data MCP Server (stdio transport)")
+        mcp.run(transport="stdio")
+    else:
+        import uvicorn
+
+        logger.info("Starting Red Hat Security Data MCP Server (dual SSE + HTTP transport)")
+        app = create_dual_transport_app()
+        config = uvicorn.Config(
+            app,
+            host=os.getenv("FASTMCP_HOST", "127.0.0.1"),
+            port=int(os.getenv("FASTMCP_PORT", "8000")),
+            log_level=LOG_LEVEL.lower(),
+        )
+        server = uvicorn.Server(config)
+        import anyio
+        anyio.run(server.serve)
 
 
 if __name__ == "__main__":

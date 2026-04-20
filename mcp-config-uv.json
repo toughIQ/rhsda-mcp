@@ -7,7 +7,10 @@
         "/path/to/rhsda-mcp",
         "run",
         "mcp-server-rhsda.py"
-      ]
+      ],
+      "env": {
+        "FASTMCP_TRANSPORT": "stdio"
+      }
     }
   }
 }

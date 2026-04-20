@@ -11,6 +11,5 @@ services:
     environment:
       - FASTMCP_HOST=0.0.0.0
       - FASTMCP_PORT=8000
-      - FASTMCP_TRANSPORT=http
       - FASTMCP_LOG_LEVEL=INFO
     restart: unless-stopped

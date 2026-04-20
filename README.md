@@ -42,8 +42,10 @@ cd rhsda-mcp
 podman-compose up -d
 
 # Verify it's running
-curl http://localhost:6060/
-# Should return a connection (HTTP 200 or 404 for root path is OK)
+curl -X POST http://localhost:6060/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
+# Should return a JSON-RPC response with server info
 
 # View logs
 podman-compose logs -f
@@ -70,7 +72,9 @@ podman run -d \
   rhsda-mcp:latest
 
 # Verify it's running
-curl http://localhost:6060/sse
+curl -X POST http://localhost:6060/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
 ```
 
 **Using Docker CLI instead:**
@@ -94,8 +98,8 @@ Add to your Claude Desktop configuration file:
 {
   "mcpServers": {
     "rhsda": {
-      "url": "http://localhost:6060/sse",
-      "transport": "sse"
+      "type": "http",
+      "url": "http://localhost:6060/mcp"
     }
   }
 }
@@ -103,20 +107,23 @@ Add to your Claude Desktop configuration file:
 
 ### 💻 Claude Code CLI
 
-Add to `~/.claude/mcp.json`:
+#### Project scope (automatic)
 
-```json
-{
-  "mcpServers": {
-    "rhsda": {
-      "url": "http://localhost:6060/sse",
-      "transport": "sse"
-    }
-  }
-}
+This repository includes a `.mcp.json` file. When you open Claude Code in the project directory, it will automatically detect the MCP server and prompt you to approve it. No manual setup required.
+
+The server is only available when working inside this project directory.
+
+#### User scope (global)
+
+To make the server available in **any** Claude Code session, regardless of directory:
+
+```bash
+claude mcp add --transport http -s user rhsda http://localhost:6060/mcp
 ```
 
-**After adding the configuration**, restart Claude Desktop or Claude Code for the changes to take effect.
+This writes the config to `~/.claude/settings.json` so it persists across all projects.
+
+**After adding the configuration**, restart Claude Code for the changes to take effect.
 
 ## 💡 Usage Examples
 
@@ -263,18 +270,24 @@ docker logs -f rhsda-mcp-server
 You can verify the server is responding:
 
 ```bash
-curl http://localhost:6060/sse
-# Should start returning SSE events (streaming response)
+curl -X POST http://localhost:6060/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
+# Should return a JSON-RPC response with server capabilities
 ```
 
 ### Environment Variables
 
 The server uses the following environment variables:
 
-- `FASTMCP_TRANSPORT` - Transport mode: `sse` (default, for HTTP/container deployment) or `stdio` (for local MCP clients)
+- `FASTMCP_HOST` - Bind address: `0.0.0.0` (default in container, accepts external connections)
+- `FASTMCP_PORT` - Server port: `8000` (default)
+- `FASTMCP_TRANSPORT` - Set to `stdio` for local subprocess mode. When unset, the server runs in dual transport mode serving both SSE (`/sse`) and streamable HTTP (`/mcp`) endpoints.
+- `FASTMCP_LOG_LEVEL` - Logging level: `INFO` (default)
 - `PYTHONUNBUFFERED` - Python buffering: `1` (default, ensures logs appear immediately)
 
-> **Note:** The server listens on `0.0.0.0:8000` internally. Port configuration is managed via the port mapping (`-p` flag or `ports:` in compose.yml), not environment variables.
+> **Note:** The server listens on `0.0.0.0:8000` internally. Port configuration is managed via the port mapping (`-p` flag or `ports:` in compose.yml).
 
 ### Stopping and Removing
 
@@ -324,11 +337,15 @@ podman ps -a | grep rhsda
 **Server not responding:**
 
 ```bash
-# Test the SSE endpoint directly
-curl -v http://localhost:6060/sse
+# Test the HTTP endpoint directly
+curl -v -X POST http://localhost:6060/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
 
 # Check if the server is listening inside the container
-podman exec rhsda-mcp-server curl -f http://localhost:8000/sse
+podman exec rhsda-mcp-server curl -f -X POST http://localhost:8000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
 ```
 
 **Port already in use:**
@@ -341,7 +358,7 @@ ss -tulpn | grep 6060
 
 # Use a different external port (keep internal as 8000)
 podman run -d -p 7070:8000 --name rhsda-mcp-server rhsda-mcp:latest
-# Then update your Claude config URL to http://localhost:7070/sse
+# Then update your Claude config URL to http://localhost:7070/mcp
 ```
 
 ### Podman-Specific Issues
@@ -379,17 +396,17 @@ sudo setenforce 0
 **Tools not appearing in Claude:**
 
 1. Verify the container is running: `podman ps | grep rhsda`
-2. Check endpoint responds: `curl http://localhost:6060/sse`
-3. Verify URL in config matches: `http://localhost:6060/sse`
+2. Check endpoint responds: `curl -X POST http://localhost:6060/mcp -H "Content-Type: application/json" -d '{}'`
+3. Verify URL in config matches: `http://localhost:6060/mcp`
 4. Restart Claude Desktop/Code after config changes
-5. Check Claude logs for MCP server errors
+5. For Claude Code: check server status with `/mcp` command or `claude mcp list`
 
 **Connection refused:**
 
 1. Ensure the container is running and healthy
 2. Verify the port mapping: `podman port rhsda-mcp-server`
 3. Check firewall isn't blocking port 6060
-4. Ensure you're using `http://localhost:6060/sse` (not `https://`)
+4. Ensure you're using `http://localhost:6060/mcp` (not `https://`)
 
 ### API Requests Failing
 
@@ -426,8 +443,12 @@ rhsda-mcp/
 ├── mcp-server-rhsda.py      # Main server implementation
 ├── Dockerfile                # Container image definition
 ├── compose.yml               # Podman Compose configuration
+├── .mcp.json                 # Claude Code MCP server config (auto-detected)
 ├── .containerignore          # Build context optimization
 ├── pyproject.toml            # Project configuration and dependencies
+├── mcp-config-http.json      # Example config: Claude Desktop (HTTP)
+├── mcp-config-pip.json       # Example config: local pip (stdio)
+├── mcp-config-uv.json        # Example config: local uv (stdio)
 ├── README.md                 # This file
 └── TESTING.md                # Testing guide
 ```
@@ -462,7 +483,7 @@ The server is designed to be extensible. To add new tools:
 
 The server uses transport-aware logging:
 
-- **SSE mode (default):** Logs to stdout (visible in container logs)
+- **HTTP/SSE mode (default):** Logs to stdout (visible in container logs)
 - **stdio mode:** Logs to stderr (required for stdio protocol)
 
 View logs:
@@ -543,7 +564,7 @@ source .venv/bin/activate  # macOS/Linux
 # .venv\Scripts\activate   # Windows
 
 # Install dependencies
-pip install httpx mcp
+pip install httpx fastmcp
 
 # Test the server (stdio mode)
 FASTMCP_TRANSPORT=stdio python mcp-server-rhsda.py
